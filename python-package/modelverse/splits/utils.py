@@ -1,4 +1,3 @@
-import logging
 import math
 from itertools import chain
 
@@ -11,8 +10,6 @@ from ..feature_store import ImageStore, NumpyFeatureStore
 
 
 def create_splits_from_config(cfg):
-    logger = logging.getLogger(__name__ + ".create_splits")
-
     Schema({
         'feature_store': object,
         'entity': str,
@@ -81,7 +78,6 @@ def create_ts_folds(t, train_duration, test_duration, gap_duration, shift_durati
                 ...
             })
     """
-    logger = logging.getLogger(__name__ + ".ts_folds")
 
     if skip_start_duration is None:
         skip_start_duration = 0

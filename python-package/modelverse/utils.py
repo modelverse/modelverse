@@ -52,6 +52,7 @@ def delete_dir(path):
     try:
         shutil.rmtree(path)
     except FileNotFoundError as e:
+        print(e)
         pass
 
 
