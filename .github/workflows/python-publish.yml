@@ -6,7 +6,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Upload Python Package
+name: Publish package to PyPi
 
 on:
   release:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-    - uses: actions/checkout@v2 # action to checkout repo first
+    - uses: actions/checkout@v2 # checkout repo first
     
     - name: Set up Python
       uses: actions/setup-python@v2
