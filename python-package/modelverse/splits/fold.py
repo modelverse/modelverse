@@ -13,12 +13,12 @@ class Fold(dict):
         self._index = None
 
         # checks
-        assert self.dtype in [np.str_, np.int64], f"Dataset indices must be int or str"
-        assert 'train' in self.dataset_names, f"At least one dataset must be named 'train'"
+        assert self.dtype in [np.str_, np.int64], "Dataset indices must be int or str"
+        assert 'train' in self.dataset_names, "At least one dataset must be named 'train'"
         for k, v in self.items():
-            assert v.dtype.type == self.dtype, f"Dataset indices must be of same dtype"
-            assert isinstance(k, str), f"Dataset names must be string"
-            assert isinstance(v, np.ndarray), f"Dataset indices must be arrays"
+            assert v.dtype.type == self.dtype, "Dataset indices must be of same dtype"
+            assert isinstance(k, str), "Dataset names must be string"
+            assert isinstance(v, np.ndarray), "Dataset indices must be arrays"
 
     @property
     def index(self):

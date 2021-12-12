@@ -17,8 +17,8 @@ class Split(list):
         # checks
         for v in self:
             assert isinstance(v, Fold)
-            assert list(v.keys()) == self.dataset_names, f"All folds must have same dataset names"
-            assert v.dtype == self.dtype, f"All folds must be of same dtype"
+            assert list(v.keys()) == self.dataset_names, "All folds must have same dataset names"
+            assert v.dtype == self.dtype, "All folds must be of same dtype"
 
     @property
     def index(self):
