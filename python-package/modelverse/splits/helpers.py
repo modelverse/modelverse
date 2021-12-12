@@ -1,56 +1,41 @@
 import math
-from itertools import chain
 
 import numpy as np
-from schema import Schema
 
-from .folds import Folds
-from .splits import Splits
+from .fold import Fold
+from .split import Split
 from ..feature_store import ImageStore, NumpyFeatureStore
 
 
-def create_splits_from_config(cfg):
-    Schema({
-        'feature_store': object,
-        'entity': str,
-        'splits': {str: [str]},  # each feature name in list corresponds to a train-test fold
-    }).validate(cfg)
+def construct_fold(feature_name: str, entity, feature_store, dataset_codenames={0: 'train', 1: 'test'}):
+    f, fnames = feature_store.load_features(entity, feature_names=[feature_name], index=None)
 
-    fs = cfg['feature_store']
-    entity = cfg['entity']
-    ret = dict()
+    if isinstance(feature_store, NumpyFeatureStore):
+        ret = {}
+        for k, v in dataset_codenames.items():
+            ret[v] = np.where(f[:, 0] == k)[0]
 
-    # todo: add support for arbitrary downloads: train, val-1, val-2, test, ...
-    train_data_code = 1
-    test_data_code = 0
+    elif isinstance(feature_store, ImageStore):
+        ret = {}
+        for k, v in dataset_codenames.items():
+            ret[v] = np.array([img for img, attrs in f.items() if attrs[feature_name] == k])
 
-    print(f"Warning! Assuming train_idx are identified by value {train_data_code} and test_idx by {test_data_code} in "
-          f"features {set(chain.from_iterable(list(cfg['splits'].values())))}")
+    else:
+        raise NotImplementedError(f"Feature store of type '{type(feature_store)}' not supported!")
 
-    for split_name, feature_names in cfg['splits'].items():
-        f, fnames = fs.load_features(entity, feature_names=feature_names, index=None)
-
-        if isinstance(fs, NumpyFeatureStore):
-            ret[split_name] = Folds({i: {
-                'train': np.where(f[:, i] == train_data_code)[0],
-                'test': np.where(f[:, i] == test_data_code)[0]
-            } for i, _ in enumerate(fnames)}
-            )
-
-        elif isinstance(fs, ImageStore):
-            ret[split_name] = Folds({i: {
-                'train': np.array([img for img, attrs in f.items() if attrs[feature_name] == train_data_code]),
-                'test': np.array([img for img, attrs in f.items() if attrs[feature_name] == test_data_code])
-            } for i, feature_name in enumerate(fnames)}
-            )
-
-        else:
-            raise NotImplementedError(f"Feature store of type '{type(fs)}' not supported!")
-
-    return Splits(ret)
+    ret = Fold(ret)
+    return ret
 
 
-def create_ts_folds(t, train_duration, test_duration, gap_duration, shift_duration=None, skip_start_duration=None,
+def construct_split(feature_names: list, entity, feature_store, dataset_codenames={0: 'train', 1: 'test'}):
+    ret = []
+    for feature_name in feature_names:
+        ret.append(construct_fold(feature_store, entity, feature_name, dataset_codenames))
+    ret = Split(ret)
+    return ret
+
+
+def create_ts_split(t, train_duration, test_duration, gap_duration, shift_duration=None, skip_start_duration=None,
                     skip_end_duration=None):
     """General function to get time series folds.
 
@@ -71,12 +56,11 @@ def create_ts_folds(t, train_duration, test_duration, gap_duration, shift_durati
             case no end duration will be skipped.
 
     Returns:
-            Fold({
-                0: {'train' :[0, 1, 2, 3], 'test': [5, 6, 7]},
-                1: {'train' :[...], 'test': [...]},
-                2: {'train' :[...], 'test': [...]},
-                ...
-            })
+            Split([ Fold({'train' :[0, 1, 2, 3], 'test': [5, 6, 7]}),
+                    Fold({'train' :[...], 'test': [...]}),
+                    Fold({'train' :[...], 'test': [...]}),
+                    ...
+                  ])
     """
 
     if skip_start_duration is None:
@@ -102,7 +86,7 @@ def create_ts_folds(t, train_duration, test_duration, gap_duration, shift_durati
     if k <= 0:
         raise Exception("No folds possible")
 
-    ret = dict()  # index form
+    ret = []  # index form
 
     for i in range(k):
         # Start building folds from the right most end
@@ -122,6 +106,6 @@ def create_ts_folds(t, train_duration, test_duration, gap_duration, shift_durati
         test_idx = np.where((idx >= test_start) & (idx <= test_end))[0]
         assert len(set(train_idx).intersection(test_idx)) == 0
 
-        ret[i] = {'train': np.array(train_idx, dtype=np.int64), 'test': np.array(test_idx, dtype=np.int64)}
+        ret.append({'train': np.array(train_idx, dtype=np.int64), 'test': np.array(test_idx, dtype=np.int64)})
 
-    return Folds(ret)
+    return Split(ret)
