@@ -106,6 +106,4 @@ ENV/
 .DS_Store
 
 # data
-/data
-/raw_data
-/papers
+scratch/
