@@ -3,6 +3,15 @@ import os
 from setuptools import find_packages, setup
 
 
+def get_version() -> str:
+    version_filepath = os.path.join(os.path.dirname(__file__), "python-package", "modelverse", "version.py")
+    with open(version_filepath) as f:
+        for line in f:
+            if line.startswith("__version__"):
+                return line.strip().split()[-1][1:-1]
+    assert False
+
+
 def get_long_description():
     readme_filepath = os.path.join(os.path.dirname(__file__), "README.md")
     with open(readme_filepath) as f:
@@ -17,7 +26,7 @@ def get_install_requires():
 
 setup(
     name="modelverse",
-    version="0.0.1",
+    version=get_version(),
     author="Aakansh Gupta",
     author_email="modelverse.n77py@simplelogin.co",
     long_description=get_long_description(),
