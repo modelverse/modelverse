@@ -3,3 +3,4 @@ wheel==0.35.1
 twine==3.7.1
 pytest==6.2.4
 flake8==3.7.9
+mkdocs==1.2.3
