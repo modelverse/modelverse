@@ -1,42 +1,11 @@
 import math
 
 import numpy as np
-
-from .fold import Fold
-from .split import Split
-from ..feature_store import ImageStore, NumpyFeatureStore
+from modelverse.cv import Fold, Split
 
 
-def construct_fold(feature_name: str, entity, feature_store, dataset_codenames={0: 'train', 1: 'test'}):
-    f, fnames = feature_store.load_features(entity, feature_names=[feature_name], index=None)
-
-    if isinstance(feature_store, NumpyFeatureStore):
-        ret = {}
-        for k, v in dataset_codenames.items():
-            ret[v] = np.where(f[:, 0] == k)[0]
-
-    elif isinstance(feature_store, ImageStore):
-        ret = {}
-        for k, v in dataset_codenames.items():
-            ret[v] = np.array([img for img, attrs in f.items() if attrs[feature_name] == k])
-
-    else:
-        raise NotImplementedError(f"Feature store of type '{type(feature_store)}' not supported!")
-
-    ret = Fold(ret)
-    return ret
-
-
-def construct_split(feature_names: list, entity, feature_store, dataset_codenames={0: 'train', 1: 'test'}):
-    ret = []
-    for feature_name in feature_names:
-        ret.append(construct_fold(feature_store, entity, feature_name, dataset_codenames))
-    ret = Split(ret)
-    return ret
-
-
-def create_ts_split(t, train_duration, test_duration, gap_duration, shift_duration=None, skip_start_duration=None,
-                    skip_end_duration=None):
+def create_ts_split_points(t, train_duration, test_duration, gap_duration, shift_duration=None,
+                           skip_start_duration=None, skip_end_duration=None):
     """General function to get time series folds.
 
     Generates all possible folds for time series 0, 1, ..., t-1 from right to left in the following manner:
@@ -56,11 +25,11 @@ def create_ts_split(t, train_duration, test_duration, gap_duration, shift_durati
             case no end duration will be skipped.
 
     Returns:
-            Split([ Fold({'train' :[0, 1, 2, 3], 'test': [5, 6, 7]}),
-                    Fold({'train' :[...], 'test': [...]}),
-                    Fold({'train' :[...], 'test': [...]}),
-                    ...
-                  ])
+        Example return value:
+            [ {'train_start':0, 'train_end':90, 'test_start':91, 'test_end':100},
+              {'train_start':0, 'train_end':100, 'test_start':101, 'test_end':110},
+              ...
+            ]
     """
 
     if skip_start_duration is None:
@@ -71,8 +40,6 @@ def create_ts_split(t, train_duration, test_duration, gap_duration, shift_durati
 
     if shift_duration is None:
         shift_duration = test_duration  # default setting
-
-    idx = np.array(range(t))
 
     # max number of folds possible
     if shift_duration == 0:
@@ -86,7 +53,7 @@ def create_ts_split(t, train_duration, test_duration, gap_duration, shift_durati
     if k <= 0:
         raise Exception("No folds possible")
 
-    ret = []  # index form
+    ret = []
 
     for i in range(k):
         # Start building folds from the right most end
@@ -101,11 +68,25 @@ def create_ts_split(t, train_duration, test_duration, gap_duration, shift_durati
         assert train_start >= skip_start_duration
         assert train_end >= train_start
 
-        # Get (train_idx, test_idx)
-        train_idx = np.where((idx >= train_start) & (idx <= train_end))[0]
-        test_idx = np.where((idx >= test_start) & (idx <= test_end))[0]
+        ret.append({'train_start': train_start, 'train_end': train_end, 'test_start': test_start, 'test_end': test_end})
+
+    return ret
+
+
+def create_ts_split(t, train_duration, test_duration, gap_duration, shift_duration=None, skip_start_duration=None,
+                    skip_end_duration=None):
+    split_points = create_ts_split_points(t, train_duration, test_duration, gap_duration, shift_duration,
+                                          skip_start_duration,
+                                          skip_end_duration)
+    idx = np.array(range(t))
+
+    ret = []  # index form
+
+    for i in range(len(split_points)):
+        train_idx = np.where((idx >= split_points[i]['train_start']) & (idx <= split_points[i]['train_end']))[0]
+        test_idx = np.where((idx >= split_points[i]['test_start']) & (idx <= split_points[i]['test_end']))[0]
         assert len(set(train_idx).intersection(test_idx)) == 0
 
-        ret.append({'train': np.array(train_idx, dtype=np.int64), 'test': np.array(test_idx, dtype=np.int64)})
+        ret.append(Fold({'train': np.array(train_idx, dtype=np.int64), 'test': np.array(test_idx, dtype=np.int64)}))
 
     return Split(ret)
