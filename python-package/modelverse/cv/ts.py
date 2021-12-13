@@ -1,7 +1,9 @@
 import math
 
 import numpy as np
-from modelverse.cv import Fold, Split
+
+from .fold import Fold
+from .split import Split
 
 
 def create_ts_split_points(t, train_duration, test_duration, gap_duration, shift_duration=None,
