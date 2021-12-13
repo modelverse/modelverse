@@ -59,7 +59,7 @@ class Ledger:
 
     def delete_feature_properties(self, property_names: Union[list, str]):
         # checks
-        assert property_names is not None, f"property_names must be list or str"
+        assert property_names is not None, "property_names must be list or str"
 
         # convert str regex to list
         if isinstance(property_names, str):
@@ -134,7 +134,7 @@ class Ledger:
 
         # check empty tag
         for k, v in tags.items():
-            assert '' not in v, f"tag can not be an empty string"
+            assert '' not in v, "tag can not be an empty string"
 
         # overwrite new tags
         orig_columns = list(self.data.columns)

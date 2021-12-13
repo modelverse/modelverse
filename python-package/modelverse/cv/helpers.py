@@ -31,5 +31,3 @@ def construct_split(feature_names: list, entity, feature_store, dataset_codename
         ret.append(construct_fold(feature_store, entity, feature_name, dataset_codenames))
     ret = Split(ret)
     return ret
-
-
