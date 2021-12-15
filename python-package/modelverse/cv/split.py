@@ -5,10 +5,15 @@ from ..utils import arr2_in_arr1
 
 
 class Split(list):
+    """ test
+
+    Attributes:
+        dataset_names (list):
+        dtype:
+        index:
+    """
     def __init__(self, *args, **kw):
-        """
-        split = [ Fold(), Fold(), ... ]
-        """
+        """ Initiate a split. """
         super().__init__(*args, **kw)
         self.dataset_names = self[0].dataset_names
         self.dtype = self[0].dtype
@@ -22,6 +27,7 @@ class Split(list):
 
     @property
     def index(self):
+        """ Index of a split. """
         # cached property - calculated only when called first time as it can be expensive for large folds
         if self._index is None:
             ret = np.array([], dtype=self.dtype)
@@ -32,6 +38,14 @@ class Split(list):
         return self._index
 
     def reset_index(self):
+        """ Reset indices in a split.
+
+        Resets indices of all datasets in the split to start with 0.
+
+        Returns:
+            Split: An instance of Split with new indices.
+
+        """
         index = self.index
         new_split = []
         for ix, fold in enumerate(self):
@@ -41,6 +55,22 @@ class Split(list):
         return Split(new_split)
 
     def iter(self):
+        """ Create an generator.
+
+        Creates an generator that yields pairs of (`fold num`, `watchlist`) where `watchlist` is a list of
+        (`dataset name`, `dataset indices`) pairs.
+
+
+
+        Yields:
+
+        Examples:
+            ```python
+            import numpy as np
+            s = Split([Fold(), Fold({'train': np.array([1,2])})])
+            ```
+
+        """
         for ix in range(len(self)):
             # yields <fold no>, <watchlist>
             # where <watchlist> = [(<dataset name 1> , <dataset idx 1>), (<dataset name 2> , <dataset idx 2>), .. ]
