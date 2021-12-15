@@ -2,10 +2,17 @@ import numpy as np
 
 
 class Fold(dict):
+    """
+    A fold is a collection of datasets specified as {`dataset name`: `dataset indices`} pairs.
+
+    Attributes:
+        dataset_names (list): List of dataset names in the fold.
+        dtype: Data type of a fold is the data type of the dataset indices.
+        index (np.array): The index of a fold is a sorted array of unique indices of all datasets in the fold.
+    """
+
     def __init__(self, *args, **kw):
-        """
-        fold = { <dataset name>: array([indices]), <dataset name>: array([indices]), ... }
-        """
+        """ Initiate a fold. """
         super().__init__(*args, **kw)
 
         self.dataset_names = list(self.keys())  # todo: ordering reqd?
@@ -22,6 +29,7 @@ class Fold(dict):
 
     @property
     def index(self):
+        """ Index of the fold. """
         # cached property - calculated only when called first time as it can be expensive for large folds
         if self._index is None:
             ret = np.array([], dtype=self.dtype)

@@ -6,11 +6,12 @@ from .fold import Fold
 from .split import Split
 
 
-def create_ts_split_points(t, train_duration, test_duration, gap_duration, shift_duration=None,
+def create_ts_split_points(t: int, train_duration, test_duration, gap_duration, shift_duration=None,
                            skip_start_duration=None, skip_end_duration=None):
     """General function to get time series folds.
 
-    Generates all possible folds for time series 0, 1, ..., t-1 from right to left in the following manner:
+    Generates all possible time-series-style folds for array `[0, 1, ..., t-1]` from right to left in the following
+    manner:
     |---skip start-----| |----train----| |----gap----| |----test----| |--skip end--|
 
     Args:
@@ -77,6 +78,20 @@ def create_ts_split_points(t, train_duration, test_duration, gap_duration, shift
 
 def create_ts_split(t, train_duration, test_duration, gap_duration, shift_duration=None, skip_start_duration=None,
                     skip_end_duration=None):
+    """
+    test
+    Args:
+        t:
+        train_duration:
+        test_duration:
+        gap_duration:
+        shift_duration:
+        skip_start_duration:
+        skip_end_duration:
+
+    Returns:
+
+    """
     split_points = create_ts_split_points(t, train_duration, test_duration, gap_duration, shift_duration,
                                           skip_start_duration,
                                           skip_end_duration)

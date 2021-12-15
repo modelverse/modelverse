@@ -1,17 +1,11 @@
-# Welcome to MkDocs
+# Welcome to Modelverse Docs
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+# Modelverse
+*Modelverse* is a '*Not Only Auto-ML*' framework designed to help create, track and deploy Machine Learning models quickly.
 
-## Commands
+# Key Features
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+- Supports popular and custom cross-validation strategies
+- Supports popular and custom feature stores
+- Out-of-box model telemetry tracking
+- Out-of-box and custom model recipes

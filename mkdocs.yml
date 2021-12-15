@@ -1,1 +1,27 @@
-site_name: My Docs
+site_name: Modelverse
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          rendering:
+            show_source: false
+            members_order: source
+      watch:
+        - python-package/modelverse/
+
+nav:
+  - Home: index.md
+  - API Reference:
+      - modelverse.cv: cv.md
+      - modelverse.feature_store:
+        - Ledger: ledger.md
+        - BaseFeatureStore: base_store.md
+        - DictFeatureStore: dict_feature_store.md
+        - NumpyFeatureStore: np_feature_store.md
+        - DeltaFeatureStore: delta_feature_store.md
+        - ImageStore: image_store.md
