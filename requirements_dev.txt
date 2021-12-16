@@ -9,4 +9,3 @@ mkdocstrings==0.16.2
 schema==0.7.4
 pandas==1.2.3
 numpy==1.19.2
-pre-commit==2.16.0
