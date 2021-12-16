@@ -102,8 +102,8 @@ class Ledger:
         """
         assert property_name not in ['feature_name', 'filename'], \
             f"'{property_name}' can not be 'feature_name' or 'filename'"
-        assert isinstance(property_name, str), "property_name must be string"
-        assert isinstance(property_values, dict), "property_values must be dict"  # {feature_name: property_value}
+        Schema(str).validate(property_name)
+        Schema(Or({str: object}, {})).validate(property_values)
         assert set(property_values.keys()).issubset(set(self.list_feature_names())), \
             f"features {set(property_values.keys()) - set(self.list_feature_names())} do not exist in ledger"
 
@@ -160,6 +160,9 @@ class Ledger:
             pd.DataFrame: Dataframe containing columns `feature_name` and property names.
 
         """
+        Schema(Or(list, str, None)).validate(property_names)
+        Schema(Or(list, str, None)).validate(feature_names)
+
         # None is equivalent to empty regex (search all)
         if property_names is None:
             property_names = ''
@@ -183,23 +186,25 @@ class Ledger:
         ret = self.data.loc[self.data['feature_name'].isin(feature_names), property_names].reset_index(drop=True)
         return ret
 
-    def delete_feature_properties(self, property_names: Union[list, str]):
+    def delete_feature_properties(self, property_names: Union[list, str] = None):
         """ Delete feature properties from ledger.
 
         This will not delete any `reserved-properties`.
 
         Args:
             property_names (Union[list, str]): List of property names to delete or regex to delete matching property
-                names.
+                names. If None, delete all non reserved properties.
 
         Returns:
 
         """
         # checks
-        assert property_names is not None, "property_names can not be None"
-        assert isinstance(property_names, list) | isinstance(property_names, str), "property_names must be list or str"
+        Schema(Or(list, str, None)).validate(property_names)
 
-        # convert str regex to list
+        # resolve property_names
+        if property_names is None:
+            property_names = [_ for _ in self.data.columns if _ not in self.reserved_properties]
+
         if isinstance(property_names, str):
             all_property_names = self.data.columns
             non_res_property_names = [_ for _ in all_property_names if _ not in self.reserved_properties]
@@ -226,8 +231,8 @@ class Ledger:
 
         """
         # descriptions is of the form {feature_name: description}
-        assert isinstance(descriptions, dict), "descriptions must be a dict"
-        if (descriptions == {}) | (descriptions is None):
+        Schema(Or({str: str}, {})).validate(descriptions)
+        if (descriptions == {}):
             return
         for k, v in descriptions.items():
             assert isinstance(v, str), f"description of feature '{k}' must be string"
@@ -248,17 +253,19 @@ class Ledger:
         ret = dict(zip(ret['feature_name'], ret['description']))
         return ret
 
-    def delete_feature_descriptions(self, feature_names: Union[list, str]):
+    def delete_feature_descriptions(self, feature_names: Union[list, str] = None):
         """ Delete feature descriptions from ledger.
 
         Args:
             feature_names (Union[list, str]): List of feature names to delete descriptions for or regex to delete
-                descriptions for matching feature names.
+                descriptions for matching feature names. If None, deletes descriptions of all features.
 
         Returns:
 
         """
-        assert feature_names is not None, "feature_names must be list or str"
+        Schema(Or(list, str, None)).validate(feature_names)
+        if feature_names is None:
+            feature_names = list(self.data['feature_name'])
         if isinstance(feature_names, str):
             feature_names = list(filter(re.compile(feature_names).search, list(self.data['feature_name'])))
         self.data.loc[self.data['feature_name'].isin(feature_names), 'description'] = None

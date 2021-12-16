@@ -102,9 +102,9 @@ def test_list_feature_names_nontrivial(example_ledger1, regex, expected):
                              # incorrect feature name
                              ('p1', {'xxx': 'v'}, AssertionError),
                              # non-string property_name
-                             (420, {}, AssertionError),
+                             (420, {}, SchemaUnexpectedTypeError),
                              # non-dict property_values
-                             ('p1', 'xxx', AssertionError),
+                             ('p1', 'xxx', SchemaError),
                          ])
 def test_write_feature_property_fail(empty_ledger, example_ledger1, property_name, property_values,
                                      expected_error):
@@ -174,6 +174,9 @@ def test_write_feature_property_ok_nontrivial(example_ledger1, property_name, pr
                          [
                              # incorrect properties
                              (['xxx'], None, AssertionError),
+                             # dtypes
+                             (1, None, SchemaError),
+                             (None, 1, SchemaError),
                          ])
 def test_read_feature_properties_fail(empty_ledger, example_ledger1, property_names, feature_names, expected_error):
     with pytest.raises(expected_error):
@@ -305,9 +308,8 @@ def test_read_feature_properties_ok_nontrivial(example_ledger2, property_names, 
 @pytest.mark.parametrize("property_names, expected_error",
                          [
                              # incorrect datatype of property_names
-                             ({}, AssertionError),
-                             # None
-                             (None, AssertionError),
+                             ({}, SchemaError),
+                             (1, SchemaError),
                              # reserved-properties
                              (['feature_name'], ValueError),
                              (['filename'], ValueError),
@@ -349,6 +351,12 @@ def test_delete_feature_properties_fail(empty_ledger, example_ledger2, property_
                                                            'description': pd.Series(dtype=str),
                                                            'tags': pd.Series(dtype=object),
                                                            }).reset_index(drop=True)),
+                             # None
+                             (None, pd.DataFrame({'feature_name': pd.Series(dtype=str),
+                                                  'filename': pd.Series(dtype=str),
+                                                  'description': pd.Series(dtype=str),
+                                                  'tags': pd.Series(dtype=object),
+                                                  }).reset_index(drop=True)),
                          ])
 def test_delete_feature_properties_ok_trivial(empty_ledger, property_names, expected_data):
     empty_ledger.delete_feature_properties(property_names)
@@ -384,6 +392,12 @@ def test_delete_feature_properties_ok_trivial(empty_ledger, property_names, expe
                                                            'tags': pd.Series([['t1'], ['t2']], dtype=object),
                                                            'p1': pd.Series([None, 1.], dtype=float),
                                                            })),
+                             # regex with reserved-property match
+                             (None, pd.DataFrame({'feature_name': pd.Series(['f1', 'f2'], dtype=str),
+                                                  'filename': pd.Series(['n1', 'n2'], dtype=str),
+                                                  'description': pd.Series(['d1', 'd2'], dtype=str),
+                                                  'tags': pd.Series([['t1'], ['t2']], dtype=object),
+                                                  })),
                          ])
 def test_delete_feature_properties_ok_nontrivial(example_ledger2, property_names, expected_data):
     example_ledger2.delete_feature_properties(property_names)
@@ -393,13 +407,13 @@ def test_delete_feature_properties_ok_nontrivial(example_ledger2, property_names
 @pytest.mark.parametrize("descriptions, expected_error",
                          [
                              # not dict
-                             (1, AssertionError),
+                             (1, SchemaError),
                              # None
-                             (None, AssertionError),
+                             (None, SchemaError),
                              # incorrect feature
-                             ('xxx', AssertionError),
+                             ('xxx', SchemaError),
                              # non string descriptions
-                             ({'f1': 1}, AssertionError)
+                             ({'f1': 1}, SchemaError)
                          ])
 def test_write_feature_descriptions_fail(empty_ledger, example_ledger1, descriptions, expected_error):
     with pytest.raises(expected_error):
@@ -454,7 +468,7 @@ def test_write_feature_descriptions_ok_nontrivial(example_ledger3, descriptions,
 
 @pytest.mark.parametrize("feature_names, expected_error",
                          [
-                             (1, TypeError),
+                             (1, SchemaError),
                          ])
 def test_read_feature_descriptions_fail(empty_ledger, example_ledger3, feature_names, expected_error):
     with pytest.raises(expected_error):
@@ -497,8 +511,7 @@ def test_read_feature_descriptions_ok_nontrivial(example_ledger3, feature_names,
 
 @pytest.mark.parametrize("feature_names, expected_error",
                          [
-                             (None, AssertionError),
-                             (1, TypeError),
+                             (1, SchemaError),
                          ])
 def test_delete_feature_descriptions_fail(empty_ledger, example_ledger3, feature_names, expected_error):
     with pytest.raises(expected_error):
@@ -527,6 +540,12 @@ def test_delete_feature_descriptions_fail(empty_ledger, example_ledger3, feature
                                                    'description': pd.Series(dtype=str),
                                                    'tags': pd.Series(dtype=object),
                                                    }).reset_index(drop=True)),
+                             # None
+                             (None, pd.DataFrame({'feature_name': pd.Series(dtype=str),
+                                                  'filename': pd.Series(dtype=str),
+                                                  'description': pd.Series(dtype=str),
+                                                  'tags': pd.Series(dtype=object),
+                                                  }).reset_index(drop=True)),
                          ])
 def test_delete_feature_descriptions_ok_trivial(empty_ledger, feature_names, expected_data):
     empty_ledger.delete_feature_descriptions(feature_names)
@@ -561,6 +580,13 @@ def test_delete_feature_descriptions_ok_trivial(empty_ledger, feature_names, exp
                                                  'tags': pd.Series([['t1'], ['t2']], dtype=object),
                                                  'p1': pd.Series([None, 1.], dtype=float),
                                                  })),
+                             # None
+                             (None, pd.DataFrame({'feature_name': pd.Series(['f1', 'f2'], dtype=str),
+                                                  'filename': pd.Series(['n1', 'n2'], dtype=str),
+                                                  'description': pd.Series([None, None], dtype=str),
+                                                  'tags': pd.Series([['t1'], ['t2']], dtype=object),
+                                                  'p1': pd.Series([None, 1.], dtype=float),
+                                                  })),
                          ])
 def test_delete_feature_descriptions_ok_nontrivial(example_ledger3, feature_names, expected_data):
     example_ledger3.delete_feature_descriptions(feature_names)
