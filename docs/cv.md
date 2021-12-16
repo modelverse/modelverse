@@ -19,6 +19,7 @@
             - iter
     rendering:
         show_root_heading: true
+        members_order: source
 
 ---
 ::: modelverse.cv.create_ts_split_points

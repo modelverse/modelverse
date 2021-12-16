@@ -7,7 +7,7 @@ from modelverse.cv import Fold
 logger = logging.getLogger()
 
 
-def test_trivial_fold():
+def test_fold_fail():
     with pytest.raises(IndexError):
         _ = Fold()
 
@@ -24,7 +24,7 @@ def test_trivial_fold():
         _ = Fold({'train': np.array([])})
 
 
-def test_int_fold():
+def test_fold_int():
     f = Fold({'train': np.array([1, 2]), 'test': np.array([1])})
     assert list(f.index) == [1, 2]
     assert f.dataset_names == ['train', 'test']
@@ -32,7 +32,7 @@ def test_int_fold():
     print(f)
 
 
-def test_str_fold():
+def test_fold_str():
     f = Fold({'train': np.array(['1', '2']), 'test': np.array(['1'])})
     assert list(f.index) == ['1', '2']
     assert f.dataset_names == ['train', 'test']
@@ -40,6 +40,6 @@ def test_str_fold():
     print(f)
 
 
-def test_mixed_fold():
+def test_fold_mixed():
     with pytest.raises(AssertionError):
         Fold({'train': np.array([1, 2]), 'test': np.array(['a'])})

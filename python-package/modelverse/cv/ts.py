@@ -6,13 +6,15 @@ from .fold import Fold
 from .split import Split
 
 
-def create_ts_split_points(t: int, train_duration, test_duration, gap_duration, shift_duration=None,
-                           skip_start_duration=None, skip_end_duration=None):
-    """General function to get time series folds.
+def create_ts_split_points(t: int, train_duration: int, test_duration: int, gap_duration: int,
+                           shift_duration: int = None, skip_start_duration: int = None, skip_end_duration: int = None):
+    """ General function to create time series folds.
 
-    Generates all possible time-series-style folds for array `[0, 1, ..., t-1]` from right to left in the following
+    Constructs all possible time-series-style folds for array `[0, 1, ..., t-1]` from right to left in the following
     manner:
+    ```
     |---skip start-----| |----train----| |----gap----| |----test----| |--skip end--|
+    ```
 
     Args:
         t (int): Total time duration.
@@ -28,11 +30,9 @@ def create_ts_split_points(t: int, train_duration, test_duration, gap_duration, 
             case no end duration will be skipped.
 
     Returns:
-        Example return value:
-            [ {'train_start':0, 'train_end':90, 'test_start':91, 'test_end':100},
-              {'train_start':0, 'train_end':100, 'test_start':101, 'test_end':110},
-              ...
-            ]
+        List[Dict]: List of dicts of the form
+        `[{'train_start':int, 'train_end':int, 'test_start':int, 'test_end':int}, ...]`.
+
     """
 
     if skip_start_duration is None:
@@ -78,18 +78,10 @@ def create_ts_split_points(t: int, train_duration, test_duration, gap_duration, 
 
 def create_ts_split(t, train_duration, test_duration, gap_duration, shift_duration=None, skip_start_duration=None,
                     skip_end_duration=None):
-    """
-    test
-    Args:
-        t:
-        train_duration:
-        test_duration:
-        gap_duration:
-        shift_duration:
-        skip_start_duration:
-        skip_end_duration:
+    """ Same as `create_ts_split_points` but returns an instance of `Split` instead.
 
     Returns:
+        Split: A `Split` consisting of `Folds` with datasets 'train' and 'test' adn their indices.
 
     """
     split_points = create_ts_split_points(t, train_duration, test_duration, gap_duration, shift_duration,

@@ -3,16 +3,25 @@ import numpy as np
 
 class Fold(dict):
     """
-    A fold is a collection of datasets specified as {`dataset name`: `dataset indices`} pairs.
+    A `Fold` is a collection of `datasets` specified as a dictionary of {`dataset name`: `dataset indices`} pairs.
+    A `dataset` is a subset of a feature table from a feature store (or an image sample from an image store)
+    and `dataset indices` refer to the row indices or image names respectively.
 
     Attributes:
         dataset_names (list): List of dataset names in the fold.
-        dtype: Data type of a fold is the data type of the dataset indices.
+        dtype (np.dtype.type): Data type of a fold is the data type of the dataset indices.
         index (np.array): The index of a fold is a sorted array of unique indices of all datasets in the fold.
     """
 
     def __init__(self, *args, **kw):
-        """ Initiate a fold. """
+        """ Initiate a fold.
+
+        Examples:
+            ```
+            f = Fold({'train': np.array([1, 2]), 'test': np.array([3]), 'hold': np.array([4])})
+            f = Fold({'train': np.array(['a', 'b']), 'test': np.array(['c'])})
+            ```
+        """
         super().__init__(*args, **kw)
 
         self.dataset_names = list(self.keys())  # todo: ordering reqd?

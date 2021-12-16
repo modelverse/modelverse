@@ -5,15 +5,24 @@ from ..utils import arr2_in_arr1
 
 
 class Split(list):
-    """ test
+    """
+    A `Split` is a list of `Folds`. All `Folds` in a `Split` must have the same dataset names.
 
     Attributes:
-        dataset_names (list):
-        dtype:
-        index:
+        dataset_names (list): List of dataset names in constituent `Folds`.
+        dtype (np.dtype.type): dtype of constituent `Folds`.
+        index (np.array): The index of a `Split` is a sorted array of unique indices of all constituent `Folds`.
     """
+
     def __init__(self, *args, **kw):
-        """ Initiate a split. """
+        """ Initiate a split.
+
+        Examples:
+            ```
+            s = Split([ {'train': array([1, 2]), 'val': array([3, 4])},
+                        {'train': array([3, 4]), 'val': array([1, 2])} ])
+            ```
+        """
         super().__init__(*args, **kw)
         self.dataset_names = self[0].dataset_names
         self.dtype = self[0].dtype
@@ -55,20 +64,15 @@ class Split(list):
         return Split(new_split)
 
     def iter(self):
-        """ Create an generator.
+        """ Create a generator.
 
-        Creates an generator that yields pairs of (`fold num`, `watchlist`) where `watchlist` is a list of
+        Creates a generator that yields pairs of (`fold num`, `watchlist`) where `watchlist` is a list of
         (`dataset name`, `dataset indices`) pairs.
 
 
 
-        Yields:
-
-        Examples:
-            ```python
-            import numpy as np
-            s = Split([Fold(), Fold({'train': np.array([1,2])})])
-            ```
+        Returns:
+            Pairs of the form (`fold num`, [(`dataset name`, `dataset indices`)]).
 
         """
         for ix in range(len(self)):
