@@ -10,75 +10,111 @@ import pandas as pd
 from schema import Or, Schema
 
 
-class Ledger:
-    """ A ledger stores feature metadata.
+class FeatureCatalog:
+    """ A Feature Catalog.
 
-    Every feature table in a feature store is accompanied by its ledger. The ledger stores feature names and their
-    properties. Any arbitrary feature properties can be added to a ledger with the exception of the following
-    `reserved-properties` that exist by default in every ledger:
+    A Feature Catalog stores feature names and their properties.
+    Every Feature Table in a Feature Store is accompanied by a Feature Catalog.
 
-    - **feature_name**: Property specifying name of the feature. Also the key of the ledger.
-    - **filename**: Filename where the feature is stored.
-    - **description**: Feature description.
-    - **tags**: A list of tags assigned to feature.
+    Arbitrary feature properties can be added to a Feature Catalog with the exception
+    of the below `reserved-properties` that exist by default in every Feature Catalog.
 
-    Under the hood, a ledger is stored as a pandas dataframe with feature properties as columns and the reserved
-    property `feature_name` as the primary key of the dataframe.
+    - `feature_name`: Name of the feature.
+    - `filename`: Filename where the feature is stored.
+    - `description`: Feature description.
+    - `tags`: A list of tags assigned to feature.
+
+    Under the hood, a Feature Catalog is stored as a Pandas dataframe with feature properties as columns and the
+    reserved property `feature_name` as the primary key of the dataframe.
 
     Attributes:
-        path (pathlib.Path): Path to directory where ledger is stored.
-        data (pandas.DataFrame): Ledger dataframe.
+        path (pathlib.Path): Path to directory where feature-catalog is stored.
+        data (pandas.DataFrame): feature-catalog dataframe.
         reserved_roperties (list): List of `reserved-properties`.
+        reserved_tags (list): List of reserved `tags`.
 
     """
 
-    logger = logging.getLogger(__name__ + ".Ledger")
+    logger = logging.getLogger(__name__ + ".FeatureCatalog")
 
-    def __init__(self, path: Path):
-        """ Initiate a ledger.
+    def __init__(self, path: Union[str, Path]):
+        """ Initiate Feature Catalog.
 
         Args:
-            path (pathlib.Path): Path to ledger.
+            path (Union[str, pathlib.Path]): Path to feature-catalog.
         """
 
-        self.path = path
+        self.path = Path(path).resolve()
         self.data = pd.DataFrame({'feature_name': pd.Series(dtype=str),
                                   'filename': pd.Series(dtype=str),
                                   'description': pd.Series(dtype=str),
                                   'tags': pd.Series(dtype=object),
                                   }).reset_index(drop=True)  # reset changes index from Index() to RangeIndex()
         self.reserved_properties = ['feature_name', 'filename', 'description', 'tags']
+        self.reserved_tags = ['']
+
+    def __eq__(self, other):
+        """ Define equality of feature catalogs. """
+
+        if (self.path == other.path) & \
+                self.data.equals(other.data) & \
+                (self.reserved_properties == other.reserved_properties) & \
+                (self.reserved_tags == other.reserved_tags):
+            return True
+        return False
 
     def save(self):
-        """ Save ledger (saved as `ledger.pkl` at `self.path`). Will fail if this file already exists. """
-        path = self.path / 'ledger.pkl'
-        if path.exists():
-            raise FileExistsError(f"File {path} already exists")
-        else:
-            self.data.to_pickle(path)
+        """ Save Feature Catalog.
 
-    def load(self) -> Ledger:
-        """ Load ledger.
+        Existing Catalog is overwritten.
 
         Returns:
-            Ledger: Returns an instance of Ledger class
+             None: None
         """
-        self.data = pd.read_pickle(self.path / 'ledger.pkl')
+        # create directory if not exists
+        self.path.mkdir(parents=True, exist_ok=True)
+
+        # save pkl
+        path = self.path / 'feature_catalog.pkl'
+        self.data.to_pickle(path)
+
+    def load(self) -> FeatureCatalog:
+        """ Load Feature Catalog.
+
+        Throws exception if the Catalog does not exist or is corrupt.
+
+        Returns:
+            FeatureCatalog: Returns an instance of FeatureCatalog class
+        """
+        self.data = pd.read_pickle(self.path / 'feature_catalog.pkl')
+        # checks
+        for p in self.reserved_properties:
+            assert p in self.data.columns, f"property '{p}' not in catalog"
+
+        assert len(self.data['feature_name'].unique()) == self.data.shape[0], f"duplicate feature names found"
+
         return self
 
     def delete(self):
-        """ Delete ledger (deletes `ledger.pkl`) """
-        path = self.path / 'ledger.pkl'
+        """ Delete Feature Catalog.
+
+        Throws exception if the Catalog does not exist.
+
+        Returns:
+             None: None
+        """
+        self.load()  # load first to make sure a catalog exists
+        path = self.path / 'feature_catalog.pkl'
         path.unlink(missing_ok=True)
 
     def list_feature_names(self, regex=None) -> List[str]:
-        """ List feature names in ledger.
+        """ List feature names in Feature Catalog.
 
         Args:
             regex (str, optional): Regex to search feature names. If None, list all feature names.
 
         Returns:
-            list: List of matching feature names in ledger.
+            list: List of matching feature names in feature-catalog.
 
         """
         ret = list(self.data['feature_name'].unique())  # uniques returned in order of appearance
@@ -86,8 +122,44 @@ class Ledger:
             ret = list(filter(re.compile(regex).search, ret))
         return ret  # todo: think sort order
 
+    def _append_features(self, features: Dict[str, str]):
+        """ Append new featurs to feature-catalog
+        
+        Args:
+            features (Dict[str, str]): Dict of `{feature name: filename}` pairs to add to feature-catalog.
+                All other properties are initiated as None/empty. 
+
+        Returns:
+            None: None
+        """
+        Schema(Or({}, {str: str})).validate(features)
+        existing_feature_names = self.list_feature_names()
+
+        for feature_name in features.keys():
+            assert feature_name not in existing_feature_names, f"{feature_name} already exists in Feature Catalog. Aborting"
+
+        for feature_name, filename in features.items():
+            self.data = self.data.append({'feature_name': feature_name, 'filename': filename, 'tags': []},
+                                         ignore_index=True)
+        self.data = self.data.reset_index(drop=True)
+        self.save()
+
+    def _delete_features(self, feature_names: list):
+        """ Delete features from feature-catalog.
+
+        Args:
+            feature_names (list): List of feature names to delete.
+
+        Returns:
+            None: None
+
+        """
+        Schema(Or([], [str])).validate(feature_names)
+        self.data = self.data[~self.data['feature_name'].isin(feature_names)].reset_index(drop=True)
+        self.save()
+
     def __write_feature_property(self, property_name: str, property_values: Dict[str, Any]):
-        """ Write feature property to ledger. This function CAN be used to write SOME `reserved-properties`.
+        """ Write feature property to feature-catalog. This function CAN be used to write SOME `reserved-properties`.
 
         If the property exists, existing values of specified features are overwritten by new values, otherwise a new
         property is created. If a new property is created, values of unspecified features are filled as None.
@@ -95,7 +167,7 @@ class Ledger:
         Args:
             property_name (str): Property name to write.
             property_values (Dict[str, Any]): Dict specifying property values of features as
-                {`feature name`: `property value`} pairs. An incorrect feature names raises error.
+                {`feature name`: `property value`} pairs. An incorrect feature name throws an exception.
 
         Returns:
 
@@ -105,7 +177,7 @@ class Ledger:
         Schema(str).validate(property_name)
         Schema(Or({str: object}, {})).validate(property_values)
         assert set(property_values.keys()).issubset(set(self.list_feature_names())), \
-            f"features {set(property_values.keys()) - set(self.list_feature_names())} do not exist in ledger"
+            f"features {set(property_values.keys()) - set(self.list_feature_names())} do not exist in feature-catalog"
 
         orig_columns = copy.deepcopy(list(self.data.columns))
 
@@ -124,21 +196,24 @@ class Ledger:
         p_values = pd.DataFrame(p_values.items(), columns=['feature_name', property_name])
 
         self.data = self.data.merge(p_values, how='left', on=['feature_name'])[new_columns]
+        self.save()
 
     def write_feature_property(self, property_name: str, property_values: Dict[str, Any]):
-        """ Write feature property to ledger.
+        """ Write feature property to Feature Catalog.
 
-        If the property exists, existing values of specified features are overwritten by new values, otherwise a new
-        property is created. If a new property is created, values of unspecified features are filled as None.
+        If the property exists, existing property values of specified features are overwritten by new property values,
+        otherwise a new property is created.
+        If a new property is created, values of unspecified features are filled as None.
 
-        This function cannot be used to write `reserved-properties`.
+        This method cannot be used to write `reserved-properties`.
 
         Args:
             property_name (str): Property name to write.
             property_values (Dict[str, Any]): Dict specifying property values of features as
-                {`feature name`: `property value`} pairs. An incorrect feature names raises error.
+                {`feature name`: `property value`} pairs. An incorrect feature name throws an exception.
 
         Returns:
+            None: None
 
         """
         assert property_name not in self.reserved_properties, f"'{property_name}' is a reserved-property"
@@ -146,9 +221,9 @@ class Ledger:
 
     def read_feature_properties(self, property_names: Union[list, str] = None,
                                 feature_names: Union[list, str] = None) -> pd.DataFrame:
-        """ Read feature properties from ledger.
+        """ Read feature properties from Feature Catalog.
 
-        Reads given feature properties of given feature names.
+        Reads feature properties of given feature names.
 
         Args:
             property_names (Union[list, str]): List of property names to read or regex to read matching property names.
@@ -187,7 +262,7 @@ class Ledger:
         return ret
 
     def delete_feature_properties(self, property_names: Union[list, str] = None):
-        """ Delete feature properties from ledger.
+        """ Delete feature properties from Feature Catalog.
 
         This will not delete any `reserved-properties`.
 
@@ -196,6 +271,7 @@ class Ledger:
                 names. If None, delete all non reserved properties.
 
         Returns:
+            None: None
 
         """
         # checks
@@ -221,13 +297,16 @@ class Ledger:
                 del self.data[p]
                 self.logger.warning(f"Deleted property {p}")
 
+        self.save()
+
     def write_feature_descriptions(self, descriptions: Dict[str, str]):
-        """ Write feature descriptions to ledger.
+        """ Write feature descriptions to Feature Catalog.
 
         Args:
             descriptions (Dict[str, str]): Dict containing {`feature name`: `description`} pairs.
 
         Returns:
+            None: None
 
         """
         # descriptions is of the form {feature_name: description}
@@ -239,7 +318,7 @@ class Ledger:
         self.__write_feature_property(property_name='description', property_values=descriptions)
 
     def read_feature_descriptions(self, feature_names: Union[list, str] = None) -> dict:
-        """ Read feature descriptions from ledger.
+        """ Read feature descriptions from Feature Catalog.
 
         Args:
             feature_names (Union[list, str]): List of feature names to read descriptions for or regex to read
@@ -254,13 +333,14 @@ class Ledger:
         return ret
 
     def delete_feature_descriptions(self, feature_names: Union[list, str] = None):
-        """ Delete feature descriptions from ledger.
+        """ Delete feature descriptions from Feature Catalog.
 
         Args:
             feature_names (Union[list, str]): List of feature names to delete descriptions for or regex to delete
                 descriptions for matching feature names. If None, deletes descriptions of all features.
 
         Returns:
+            None: None
 
         """
         Schema(Or(list, str, None)).validate(feature_names)
@@ -269,37 +349,35 @@ class Ledger:
         if isinstance(feature_names, str):
             feature_names = list(filter(re.compile(feature_names).search, list(self.data['feature_name'])))
         self.data.loc[self.data['feature_name'].isin(feature_names), 'description'] = None
+        self.save()
 
     def write_feature_tags(self, tags: dict):
-        """ Write feature tags to ledger.
+        """ Write feature tags to Feature Catalog.
 
         Given list of tags overwrite existing tags (do not append to existing tags).
-        Empty string `''` feature tags are not allowed. To assign no tags to a feature use empty list
+        Empty string `''` tags are not allowed. To assign no tags to a feature use empty list
         `{feature name: []}`.
 
         Args:
             tags (dict): Dict containing {`feature name`: `[tags]`} pairs.
 
         Returns:
+            None: None
 
         """
         # tags is a dict of form {feature_name: [tag_names]}
         Schema({str: [str]}).validate(tags)
 
-        # trivial case
-        if (tags == {}) | (tags is None):
-            return
+        # check reserved tags
+        for k, v in tags.items():
+            assert len(set(v).intersection(set(self.reserved_tags))) == 0, "tags can not containg 'reserved_tags'"
 
-        # check feature_names exist in ledger
+        # check feature_names exist in feature-catalog
         assert set(tags.keys()).issubset(set(self.list_feature_names())), \
-            f"features '{set(tags.keys()) - set(self.list_feature_names())}' do not exist in ledger"
+            f"features '{set(tags.keys()) - set(self.list_feature_names())}' do not exist in feature-catalog"
 
         # remove duplicate tags
         tags = {k: sorted(list(set(v))) for k, v in tags.items()}
-
-        # check empty tag
-        for k, v in tags.items():
-            assert '' not in v, "tag can not be an empty string"
 
         # overwrite new tags
         orig_columns = list(self.data.columns)
@@ -307,19 +385,22 @@ class Ledger:
         p_values.update(tags)
         p_values = pd.DataFrame(p_values.items(), columns=['feature_name', 'tags'])
         self.data = self.data.drop('tags', axis=1).merge(p_values, how='left', on=['feature_name'])[orig_columns]
+        self.save()
 
-    def read_feature_tags(self, tags: Union[list, str] = None, feature_names: Union[list, str] = None) -> dict:
-        """ Read feature tags from ledger.
-
-        Note that features with no tags are never included in the results.
+    def read_feature_tags(self, tags: Union[list, str] = None, feature_names: Union[list, str] = None,
+                          include_untagged_features: bool = False) -> dict:
+        """ Read feature tags from Feature Catalog.
 
         Args:
             tags (Union[list, str]): List of tags to read or regex to read matching tags. If None, read all tags.
             feature_names (Union[list, str]): List of feature names to read tags for or regex to read tags  for
                 matching feature names. If None, read all feature names.
+            include_untagged_features (bool): Whether to include untagged feature names or not.
+                If included, untagged features are assigned to the key `''` in the return dict.
 
         Returns:
             dict: Dict of {`tag name`: `[feature names]`} pairs.
+                Untagged features are assigned to the empty string key `''`.
 
         """
         Schema(Or(list, str, None)).validate(tags)
@@ -328,6 +409,8 @@ class Ledger:
         # handle None
         if feature_names is None:
             feature_names = ''
+        if tags is None:
+            tags = ''
 
         # regex to list
         if isinstance(feature_names, str):
@@ -338,16 +421,17 @@ class Ledger:
 
         ret = self.data.loc[self.data['feature_name'].isin(feature_names), ['feature_name', 'tags']]
         ret = ret.explode('tags')
-        if tags is not None:
-            ret = ret.loc[ret['tags'].isin(tags), :]
-        ret = ret[~ret['tags'].isnull()]  # remove nan tags
+        if include_untagged_features:
+            ret = ret.loc[ret['tags'].isin(tags) | (ret['tags'].isnull()), :].fillna('')
+        else:
+            ret = ret.loc[ret['tags'].isin(tags) & (~ret['tags'].isnull()), :]
         ret = ret.groupby('tags', dropna=False)['feature_name'].apply(list).to_dict()
         return ret
 
     def delete_feature_tags(self, tags: Union[list, str] = None, feature_names: Union[list, str] = None):
-        """ Delete feature tags from ledger.
+        """ Delete feature tags from Feature Catalog.
 
-        Delete all matching tags of matching feature names from ledger.
+        Delete all matching tags of matching feature names.
 
         Args:
             tags (Union[list, str], optional): List of tags to delete or regex to delete matching tags.
@@ -356,6 +440,7 @@ class Ledger:
                 tags  for matching feature names. If None, delete matching tags for all feature_names.
 
         Returns:
+            None: None
 
         """
         Schema(Or(list, str, None)).validate(feature_names)
@@ -374,3 +459,4 @@ class Ledger:
         sel = self.data.loc[self.data['feature_name'].isin(feature_names), 'tags']
         modified = sel.apply(lambda x: sorted(list(set(x) - set(tags))))
         self.data.loc[self.data['feature_name'].isin(feature_names), 'tags'] = modified
+        self.save()
