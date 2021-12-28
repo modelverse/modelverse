@@ -55,9 +55,10 @@ class FeatureCatalog:
 
     def __eq__(self, other):
         """ Define equality of feature catalogs. """
-
-        if (self.path == other.path) & \
-                self.data.equals(other.data) & \
+        # two catalogs are equal if they have same reserved_properties, reserved_tags and the same
+        # catalog dataframe (irrespective of order of rows)
+        if (self.data.sort_values(['feature_name']).reset_index(drop=True)
+                .equals(other.data.sort_values(['feature_name']).reset_index(drop=True))) & \
                 (self.reserved_properties == other.reserved_properties) & \
                 (self.reserved_tags == other.reserved_tags):
             return True
@@ -124,10 +125,10 @@ class FeatureCatalog:
 
     def _append_features(self, features: Dict[str, str]):
         """ Append new featurs to feature-catalog
-        
+
         Args:
             features (Dict[str, str]): Dict of `{feature name: filename}` pairs to add to feature-catalog.
-                All other properties are initiated as None/empty. 
+                All other properties are initiated as None/empty.
 
         Returns:
             None: None
