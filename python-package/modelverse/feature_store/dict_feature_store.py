@@ -24,8 +24,8 @@ class DictFeatureTable:
     ```
     { row_name_1: { 'f1': 1, 'f2': 2, 'f3': 3, ... }, row_name_2: { 'f1': 1, 'f3': 5, ... } }
     ```
-    where `row_name_i` denote data instances/data points/index (correspond to rows in a typical feature table)
-    and `fi` denote feature names (correspond to columns in a typical feature table).
+    where `row_name_i` denote data instances/data points/index (analogous to rows in a typical feature table)
+    and `fi` denote feature names (analogous to columns in a typical feature table).
 
     Under the hood, a Dict Feature Table consists of the below files stored at `self.table_path`:
 
